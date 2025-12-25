@@ -1,0 +1,221 @@
+:root{
+  font-family:'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --gap:12px;
+  --border-radius:10px;
+  --shadow:0 8px 28px rgba(12,20,40,.06);
+  --primary:#0f62fe;
+  --primary-dark:#0a4bd8;
+  --muted:#f1f4ff;
+  --muted-border:#d7def0;
+  --muted-headers:#e9ecef;
+  --danger:#ff3b3b;
+  --text:#111;
+  --bg:#f5f7fb;
+  --card-bg:#fff;
+  --input-bg:#fff;
+  --input-border:#dde3f0;
+  --table-border:#c8d2e6;
+  --row-hover:#f5f7fb;
+  --warning:#ffdddd;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root{
+    --primary:#7aa2ff;
+    --primary-dark:#598dff;
+    --muted:#0f1720;
+    --muted-border:#203147;
+    --muted-headers:#0f1a26;
+    --danger:#ff6b6b;
+    --text:#e6eef8;
+    --bg:#0b1220;
+    --card-bg:#08101a;
+    --input-bg:#08141f;
+    --input-border:#183047;
+    --table-border:#183047;
+    --row-hover:#071824;
+    --warning:#5a1b1b;
+  }
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);-webkit-text-size-adjust:100%;}
+
+/* Layout */
+.page{
+  padding:20px;
+}
+.card{
+  max-width:1100px;
+  margin:0 auto;
+  background:var(--card-bg);
+  padding:24px;
+  border-radius:var(--border-radius);
+  box-shadow:var(--shadow);
+}
+.h1{
+  font-size:22px;
+  margin:0 0 16px 0;
+}
+
+/* Row / Field grid */
+.row{
+  display:flex;
+  gap:var(--gap);
+  flex-wrap:wrap;
+}
+.field{
+  flex:1 1 220px;
+  min-width:160px;
+}
+label{
+  display:block;
+  font-size:13px;
+  margin-bottom:6px;
+  font-weight:600;
+  color:var(--text);
+}
+
+/* Inputs */
+.input, .select, .textarea{
+  width:100%;
+  height:44px;
+  padding:10px 12px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid var(--input-border);
+  background:var(--input-bg);
+  color:var(--text);
+  outline:none;
+  line-height:1.2;
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+.textarea{height:auto; min-height:90px; padding-top:10px}
+
+.input:focus, .select:focus, .textarea:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(15,98,254,0.12);
+}
+
+/* Buttons */
+.actions{
+  display:flex;
+  gap:var(--gap);
+  flex-wrap:wrap;
+  align-items:center;
+}
+.btn{
+  padding:10px 16px;
+  font-size:14px;
+  border-radius:8px;
+  cursor:pointer;
+  border:0;
+  transition:all .12s;
+}
+.btn:hover{opacity:0.96}
+.btn:disabled{opacity:0.6; cursor:not-allowed}
+.btn-primary{background:var(--primary-dark);color:#fff;font-weight:700}
+.btn-muted{background:transparent;color:var(--text);border:1px solid var(--input-border);font-weight:600}
+.btn-danger{background:var(--danger);color:#fff;font-weight:800}
+
+/* Table */
+.table-wrap{
+  margin-top:16px;
+  overflow-x:auto;
+  border:1px solid var(--table-border);
+  border-radius:8px;
+  background:var(--card-bg);
+}
+.table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+  color:var(--text);
+}
+.th,.td{
+  padding:10px 12px;
+  text-align:left;
+  vertical-align:middle;
+  border-bottom:1px solid rgba(0,0,0,0.04);
+  font-size:14px;
+}
+.th{
+  background:var(--muted-headers);
+  font-weight:800;
+  border-bottom:1px solid var(--table-border);
+}
+.tr:hover{background:var(--row-hover); transition:.12s}
+.numcol{text-align:center; font-weight:800}
+
+/* Inputs inside table */
+.tinput, .tselect{
+  width:100%;
+  height:40px;
+  padding:8px 10px;
+  font-size:14px;
+  border-radius:6px;
+  border:1px solid var(--input-border);
+  background:var(--input-bg);
+  color:var(--text);
+  outline:none;
+}
+.tinput:focus, .tselect:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(15,98,254,0.12);
+}
+
+/* Totals */
+.totals{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+  margin-top:8px;
+}
+.totalbar{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:16px;
+  margin-top:10px;
+  font-size:16px;
+}
+.totalbar strong{font-weight:900}
+
+/* Sidebar layout for Trips page */
+.layout{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap:16px;
+}
+.panel{
+  border:1px solid var(--table-border);
+  border-radius:8px;
+  padding:12px;
+  background:var(--card-bg);
+}
+.tripbtn{
+  width:100%;
+  text-align:left;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--input-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+.tripbtn.active{
+  border:2px solid var(--primary);
+}
+.tripmeta{font-size:12px; opacity:.75; margin-top:2px}
+
+/* Mobile */
+@media(max-width:900px){
+  .layout{grid-template-columns: 1fr;}
+  .card{padding:16px;}
+  .field{flex:1 1 140px}
+}
