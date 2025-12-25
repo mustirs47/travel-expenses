@@ -1,6 +1,6 @@
 import "@aws-amplify/ui-react/styles.css";
 import { Authenticator } from "@aws-amplify/ui-react";
-import { TripsPage } from "./pages/TripsPage";
+import { TripsPage } from "./pages/TripsPage.tsx";
 
 export default function App() {
   return (

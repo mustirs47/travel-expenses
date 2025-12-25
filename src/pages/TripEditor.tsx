@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { client } from "../lib/client";
-import { uploadData, getUrl } from "aws-amplify/storage";
+import { uploadData, getUrl, remove } from "aws-amplify/storage";
 
 type Trip = Awaited<ReturnType<typeof client.models.Trip.list>>["data"][number];
 type Receipt = Awaited<ReturnType<typeof client.models.Receipt.list>>["data"][number];
@@ -27,7 +27,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
   const total = useMemo(() => receipts.reduce((s, r) => s + (r.costEur ?? 0), 0), [receipts]);
 
   async function updateTrip(patch: Partial<Trip>) {
-    // (Performance-Fix später: local draft + onBlur. Jetzt bleibt es wie ist.)
     await client.models.Trip.update({ id: trip.id, ...patch });
     await onChanged();
   }
@@ -69,6 +68,25 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
     });
   }
 
+  async function removeAttachment(receipt: Receipt) {
+    if (!receipt.fileKey) return;
+
+    const ok = confirm("Remove attachment from this row?");
+    if (!ok) return;
+
+    try {
+      await remove({ path: receipt.fileKey });
+    } catch {
+      // ignore; still detach in DB
+    }
+
+    await patchReceipt(receipt.id, {
+      fileKey: null,
+      fileName: null,
+      mimeType: null,
+    });
+  }
+
   async function openPreview(receipt: Receipt) {
     if (!receipt.fileKey) return;
     const { url } = await getUrl({ path: receipt.fileKey });
@@ -76,7 +94,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
     setPreviewUrl(url.toString());
   }
 
-  // Category totals (UI wie früher)
   const categoryTotals = useMemo(() => {
     const sums: Record<string, number> = {};
     for (const r of receipts) {
@@ -128,46 +145,82 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
               <th className="th">Action</th>
             </tr>
           </thead>
+
           <tbody>
-            {receipts.map((r, idx) => (
-              <tr className="tr" key={r.id}>
-                <td className="td numcol">{idx + 1}</td>
-                <td className="td">
-                  <input className="tinput" type="date" value={r.date ?? ""} onChange={(e) => patchReceipt(r.id, { date: e.target.value })} />
-                </td>
-                <td className="td">
-                  <select className="tselect" value={r.category ?? "Food and Drinks"} onChange={(e) => patchReceipt(r.id, { category: e.target.value })}>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </td>
-                <td className="td">
-                  <input className="tinput" value={r.currency ?? "EUR"} onChange={(e) => patchReceipt(r.id, { currency: e.target.value })} />
-                </td>
-                <td className="td">
-                  <input className="tinput" type="number" step="0.001" value={Number(r.exchangeRate ?? 1)} onChange={(e) => patchReceipt(r.id, { exchangeRate: Number(e.target.value) })} />
-                </td>
-                <td className="td">
-                  <input className="tinput" type="number" step="0.01" value={Number(r.costEur ?? 0)} onChange={(e) => patchReceipt(r.id, { costEur: Number(e.target.value) })} />
-                </td>
-                <td className="td">
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {receipts.map((r, idx) => {
+              const inputId = `file-${r.id}`;
+              return (
+                <tr className="tr" key={r.id}>
+                  <td className="td numcol">{idx + 1}</td>
+
+                  <td className="td">
+                    <input className="tinput" type="date" value={r.date ?? ""} onChange={(e) => patchReceipt(r.id, { date: e.target.value })} />
+                  </td>
+
+                  <td className="td">
+                    <select className="tselect" value={r.category ?? "Food and Drinks"} onChange={(e) => patchReceipt(r.id, { category: e.target.value })}>
+                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </td>
+
+                  <td className="td">
+                    <input className="tinput" value={r.currency ?? "EUR"} onChange={(e) => patchReceipt(r.id, { currency: e.target.value })} />
+                  </td>
+
+                  <td className="td">
                     <input
-                      className="tinput"
-                      style={{ height: 40, padding: 6 }}
-                      type="file"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) attachFile(r, f);
-                      }}
+                      className="tinput tinput-num"
+                      type="number"
+                      step="0.001"
+                      value={Number(r.exchangeRate ?? 1)}
+                      onChange={(e) => patchReceipt(r.id, { exchangeRate: Number(e.target.value) })}
                     />
-                    <button className="btn btn-muted" disabled={!r.fileKey} onClick={() => openPreview(r)}>Preview</button>
-                  </div>
-                </td>
-                <td className="td">
-                  <button className="btn btn-danger" onClick={() => removeReceipt(r.id)}>✖</button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+
+                  <td className="td">
+                    <input
+                      className="tinput tinput-num"
+                      type="number"
+                      step="0.01"
+                      value={Number(r.costEur ?? 0)}
+                      onChange={(e) => patchReceipt(r.id, { costEur: Number(e.target.value) })}
+                    />
+                  </td>
+
+                  <td className="td">
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        id={inputId}
+                        type="file"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) attachFile(r, f);
+                          // allow re-upload same file name
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                      <label className="btn btn-muted" htmlFor={inputId} style={{ display: "inline-flex", alignItems: "center" }}>
+                        Upload
+                      </label>
+
+                      <button className="btn btn-muted" disabled={!r.fileKey} onClick={() => openPreview(r)}>Preview</button>
+                      <button className="btn btn-muted" disabled={!r.fileKey} onClick={() => removeAttachment(r)}>Remove</button>
+                    </div>
+
+                    {r.fileName && (
+                      <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
+                        {r.fileName}
+                      </div>
+                    )}
+                  </td>
+
+                  <td className="td">
+                    <button className="btn btn-danger" onClick={() => removeReceipt(r.id)}>✖</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

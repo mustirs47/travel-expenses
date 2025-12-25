@@ -219,3 +219,36 @@ label{
   .card{padding:16px;}
   .field{flex:1 1 140px}
 }
+
+/* Trip list row layout */
+.triprow{
+  display:flex;
+  gap:10px;
+  align-items:stretch;
+}
+.triprow.active .tripmain{
+  border:2px solid var(--primary);
+}
+.tripmain{
+  flex:1;
+  text-align:left;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--input-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+.tripdel{
+  padding:10px 12px;
+  min-width:44px;
+}
+
+/* Numeric input usability */
+.tinput-num{
+  min-width: 140px;
+  text-align: right;
+}
+@media(max-width:900px){
+  .tinput-num{ min-width: 160px; }
+}
