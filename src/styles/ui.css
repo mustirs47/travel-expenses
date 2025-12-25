@@ -41,20 +41,34 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-text-size-adjust:100%;
+  overflow-x:hidden; /* ABSOLUTE overflow stop */
+}
 
-/* Layout */
+/* Centered page */
 .page{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
   padding:20px;
+  overflow-x:hidden;
 }
 .card{
-  max-width:1100px;
-  margin:0 auto;
-  background:var(--card-bg);
-  padding:24px;
-  border-radius:var(--border-radius);
-  box-shadow:var(--shadow);
+  width: min(1400px, 100%);   /* nutzt mehr Screen */
+  background: var(--card-bg);
+  padding: 24px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  overflow: auto;
+  max-height: calc(100vh - 40px);
 }
+
+/* Headings */
 .h1{
   font-size:22px;
   margin:0 0 16px 0;
@@ -75,7 +89,6 @@ label{
   font-size:13px;
   margin-bottom:6px;
   font-weight:600;
-  color:var(--text);
 }
 
 /* Inputs */
@@ -93,9 +106,6 @@ label{
   -webkit-appearance:none;
   appearance:none;
 }
-
-.textarea{height:auto; min-height:90px; padding-top:10px}
-
 .input:focus, .select:focus, .textarea:focus{
   border-color:var(--primary);
   box-shadow:0 0 0 3px rgba(15,98,254,0.12);
@@ -118,23 +128,83 @@ label{
 }
 .btn:hover{opacity:0.96}
 .btn:disabled{opacity:0.6; cursor:not-allowed}
-.btn-primary{background:var(--primary-dark);color:#fff;font-weight:700}
-.btn-muted{background:transparent;color:var(--text);border:1px solid var(--input-border);font-weight:600}
-.btn-danger{background:var(--danger);color:#fff;font-weight:800}
+.btn-primary{background:var(--primary-dark);color:#fff;font-weight:800}
+.btn-muted{background:transparent;color:var(--text);border:1px solid var(--input-border);font-weight:700}
+.btn-danger{background:var(--danger);color:#fff;font-weight:900}
 
-/* Table */
+/* Icon buttons */
+.iconbar{display:flex; gap:8px; align-items:center}
+.ibtn{
+  height:40px;
+  width:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  line-height:0;
+}
+.ibtn:hover{filter:brightness(1.05)}
+.ibtn:disabled{opacity:.5; cursor:not-allowed}
+.ibtn-danger{border-color: rgba(255,0,0,.35)}
+.ibtn svg{width:18px;height:18px}
+
+/* Layout (Trips page) */
+.layout{
+  display:grid;
+  grid-template-columns: 360px 1fr;
+  gap:16px;
+  width:100%;
+  min-width:0;
+}
+.panel{
+  border:1px solid var(--table-border);
+  border-radius:8px;
+  padding:12px;
+  background:var(--card-bg);
+  min-width:0; /* critical for grid overflow */
+  overflow:hidden;
+}
+.triprow{
+  display:flex;
+  gap:10px;
+  align-items:stretch;
+}
+.tripmain{
+  flex:1;
+  min-width:0;
+  text-align:left;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--input-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  overflow:hidden;
+}
+.tripmain .title{
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.tripmeta{font-size:12px; opacity:.75; margin-top:2px}
+.triprow.active .tripmain{border:2px solid var(--primary)}
+.tripdel{min-width:44px;padding:10px 12px}
+
+/* Table wrapper */
 .table-wrap{
   margin-top:16px;
-  overflow-x:auto;
   border:1px solid var(--table-border);
   border-radius:8px;
   background:var(--card-bg);
+  overflow-x:auto;            /* only place where horizontal scroll is allowed */
+  -webkit-overflow-scrolling: touch;
 }
 .table{
   width:100%;
   border-collapse:collapse;
-  table-layout:auto;
-  color:var(--text);
+  table-layout:fixed;         /* key: prevents random expansion */
+  min-width:980px;            /* stable desktop baseline */
 }
 .th,.td{
   padding:10px 12px;
@@ -145,11 +215,11 @@ label{
 }
 .th{
   background:var(--muted-headers);
-  font-weight:800;
+  font-weight:900;
   border-bottom:1px solid var(--table-border);
 }
 .tr:hover{background:var(--row-hover); transition:.12s}
-.numcol{text-align:center; font-weight:800}
+.numcol{text-align:center; font-weight:900}
 
 /* Inputs inside table */
 .tinput, .tselect{
@@ -167,8 +237,9 @@ label{
   border-color:var(--primary);
   box-shadow:0 0 0 3px rgba(15,98,254,0.12);
 }
+.tnum{ text-align:right; }
 
-/* Totals */
+/* totals */
 .totals{
   display:flex;
   flex-direction:column;
@@ -184,170 +255,68 @@ label{
   margin-top:10px;
   font-size:16px;
 }
-.totalbar strong{font-weight:900}
-
-/* Sidebar layout for Trips page */
-.layout{
-  display:grid;
-  grid-template-columns: 320px 1fr;
-  gap:16px;
-}
-.panel{
-  border:1px solid var(--table-border);
-  border-radius:8px;
-  padding:12px;
-  background:var(--card-bg);
-}
-.tripbtn{
-  width:100%;
-  text-align:left;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid var(--input-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-.tripbtn.active{
-  border:2px solid var(--primary);
-}
-.tripmeta{font-size:12px; opacity:.75; margin-top:2px}
+.totalbar strong{font-weight:950}
 
 /* Mobile */
 @media(max-width:900px){
   .layout{grid-template-columns: 1fr;}
   .card{padding:16px;}
   .field{flex:1 1 140px}
+  .table{min-width:1060px;}     /* scroll inside wrapper, not page */
+  .tinput,.tselect{height:44px; font-size:16px;} /* iOS zoom prevention, better tap targets */
+  .btn{padding:12px 14px}
 }
 
-/* Trip list row layout */
-.triprow{
+/* VIEWPORT LAYOUT: keep UI inside screen, scroll inside card */
+.page{
+  height:100vh;
   display:flex;
-  gap:10px;
-  align-items:stretch;
+  justify-content:center;
+  align-items:center; /* echtes Center */
+  padding:20px;
 }
-.triprow.active .tripmain{
-  border:2px solid var(--primary);
-}
-.tripmain{
-  flex:1;
-  text-align:left;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid var(--input-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-.tripdel{
-  padding:10px 12px;
-  min-width:44px;
+.card.auth{
+  max-width:520px;
+  width:min(520px, 100%);
 }
 
-/* Numeric input usability */
-.tinput-num{
-  min-width: 140px;
-  text-align: right;
-}
-@media(max-width:900px){
-  .tinput-num{ min-width: 160px; }
+.card{
+  max-height: calc(100vh - 40px);
+  overflow: auto; /* vertical scrolling INSIDE card */
 }
 
-/* HARD OVERFLOW FIXES */
-.page, .card, .panel, .layout { max-width: 100%; }
-.layout { width: 100%; }
-.panel { min-width: 0; }            /* wichtig für Grid children */
-.table-wrap { max-width: 100%; }
-.table { max-width: 100%; }
-td, th { max-width: 1px; }          /* erlaubt wrapping/overflow control */
-.tripmain { min-width: 0; }
-
-/* Force horizontal scroll only inside table wrapper */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.table { min-width: 980px; }        /* Desktop baseline, scrollt bei kleineren Screens */
-
-/* Prevent any element from growing the page */
-* { max-width: 100%; }
-
-/* File controls must not stretch the table */
-.file-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  max-width: 100%;
+/* keep table header readable while scrolling (optional) */
+.th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
-.file-name {
-  font-size: 12px;
-  opacity: .75;
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Mobile: allow table to scroll instead of stretching layout */
-@media(max-width:900px){
-  .table { min-width: 1060px; }     /* mobile scroll inside table-wrap */
-}
-
-/* Trip list row layout */
-.triprow{
-  display:flex;
-  gap:10px;
-  align-items:stretch;
-}
-.triprow.active .tripmain{
-  border:2px solid var(--primary);
-}
-.tripmain{
-  flex:1;
-  text-align:left;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid var(--input-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-.tripdel{
-  padding:10px 12px;
-  min-width:44px;
-}
-
-/* Numeric input usability */
-.tinput-num{
-  min-width: 140px;
-  text-align: right;
-}
-@media(max-width:900px){
-  .tinput-num{ min-width: 160px; }
-}
-
-/* Better tap targets on mobile */
-@media(max-width:900px){
-  .tinput, .tselect { height: 44px; font-size: 16px; } /* iOS zoom prevention + bigger */
-  .btn { padding: 12px 14px; }
-  .tripdel { min-width: 48px; }
-}
-
-/* Amplify Auth UI polish */
-.auth-card { max-width: 520px; }
 @media(min-width: 901px){
-  /* after login, TripsPage needs more width; we let it expand */
-  .auth-card:has(.layout){ max-width: 1100px; }
+  .table{ min-width: 0; } /* Desktop: fit to container */
 }
-
-/* Amplify UI tokens override (works with current Amplify UI CSS) */
-:root{
-  --amplify-components-button-primary-background-color: var(--primary-dark);
-  --amplify-components-button-primary-hover-background-color: var(--primary);
-  --amplify-components-button-border-radius: 8px;
-
-  --amplify-components-fieldcontrol-border-color: var(--input-border);
-  --amplify-components-fieldcontrol-focus-border-color: var(--primary);
-  --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 3px rgba(15,98,254,0.12);
-
-  --amplify-colors-background-primary: var(--card-bg);
-  --amplify-colors-font-primary: var(--text);
+/* Import loading overlay */
+.loading-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: grid;
+  place-items: center;
+  z-index: 10000;
 }
+.loading-card{
+  width: min(420px, 92vw);
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid var(--table-border);
+  box-shadow: var(--shadow);
+}
+.spinner{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: var(--primary);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg);} }

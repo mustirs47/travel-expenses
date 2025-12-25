@@ -16,11 +16,6 @@ type Receipt = {
   costEur: number;
 };
 
-function safeNum(n: unknown, fallback = 0) {
-  const v = typeof n === "number" ? n : Number(n);
-  return Number.isFinite(v) ? v : fallback;
-}
-
 function parseISODate(iso?: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -28,19 +23,18 @@ function parseISODate(iso?: string | null) {
 }
 
 export function exportTripToXlsx(trip: Trip, receipts: Receipt[]) {
-  // Layout ähnlich deiner alten Datei:
-  // A6/B6 Arrival, A7/B7 Return, A8/B8 Traveler
-  // Header ab Zeile 10, Daten ab Zeile 11
+  // Header oben
+  const titleRow = 1;
+  const arrivalRow = 2;
+  const returnRow = 3;
+  const travelerRow = 4;
 
-  const arrivalRow = 6;
-  const returnRow = 7;
-  const travelerRow = 8;
-  const tableHeaderRow = 10;
-  const dataStartRow = tableHeaderRow + 1;
+  // Tabelle darunter
+  const tableHeaderRow = 6;
+  const dataStartRow = 7;
 
   const maxRows = dataStartRow + receipts.length + 3;
   const ws_data: any[][] = Array.from({ length: maxRows }, () => []);
-
   ws_data[tableHeaderRow - 1] = ["No", "Date", "Category", "Currency", "Exchange Rate", "Cost in EUR"];
 
   receipts.forEach((r, idx) => {
@@ -49,28 +43,21 @@ export function exportTripToXlsx(trip: Trip, receipts: Receipt[]) {
       r.date ?? "",
       r.category ?? "",
       r.currency ?? "EUR",
-      safeNum(r.exchangeRate, 1),
-      safeNum(r.costEur, 0),
+      r.exchangeRate ?? 1,
+      r.costEur ?? 0,
     ];
   });
 
+  const total = receipts.reduce((s, r) => s + (Number(r.costEur) || 0), 0);
   const totalRowIndex = dataStartRow - 1 + receipts.length;
-  const total = receipts.reduce((s, r) => s + safeNum(r.costEur, 0), 0);
   ws_data[totalRowIndex] = ["", "", "", "", "Total", total];
 
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-  // Spaltenbreiten
-  ws["!cols"] = [
-    { wpx: 70 },
-    { wpx: 120 },
-    { wpx: 220 },
-    { wpx: 100 },
-    { wpx: 120 },
-    { wpx: 120 },
-  ];
+  // Header-Zellen setzen (A1/B1 usw.)
+  ws[`A${titleRow}`] = { t: "s", v: "Trip Title" };
+  ws[`B${titleRow}`] = { t: "s", v: String(trip.title ?? "") };
 
-  // Header-Felder A6/B6 usw.
   ws[`A${arrivalRow}`] = { t: "s", v: "Arrival Date" };
   ws[`A${returnRow}`] = { t: "s", v: "Return Date" };
   ws[`A${travelerRow}`] = { t: "s", v: "Traveler" };
@@ -80,44 +67,33 @@ export function exportTripToXlsx(trip: Trip, receipts: Receipt[]) {
 
   ws[`B${arrivalRow}`] = arrD ? { t: "d", v: arrD, z: "dd.mm.yyyy" } : { t: "s", v: trip.arrivalDate ?? "" };
   ws[`B${returnRow}`] = retD ? { t: "d", v: retD, z: "dd.mm.yyyy" } : { t: "s", v: trip.returnDate ?? "" };
-  ws[`B${travelerRow}`] = { t: "s", v: trip.traveler ?? "" };
+  ws[`B${travelerRow}`] = { t: "s", v: String(trip.traveler ?? "") };
 
-  // Formatierung der Spalten in Datenzeilen
-  receipts.forEach((r, idx) => {
-    const row = dataStartRow + idx;
+  // Column widths
+  ws["!cols"] = [
+    { wpx: 55 },   // No
+    { wpx: 120 },  // Date
+    { wpx: 220 },  // Category
+    { wpx: 95 },   // Currency
+    { wpx: 120 },  // Rate
+    { wpx: 120 },  // Cost
+  ];
 
-    // No
-    ws[`A${row}`] = { t: "n", v: idx + 1 };
-
-    // Date
-    const d = parseISODate(r.date);
-    ws[`B${row}`] = d ? { t: "d", v: d, z: "dd.mm.yyyy" } : { t: "s", v: r.date ?? "" };
-
-    // Category/Currency
-    ws[`C${row}`] = { t: "s", v: r.category ?? "" };
-    ws[`D${row}`] = { t: "s", v: r.currency ?? "EUR" };
-
-    // Exchange Rate (3 decimals)
-    ws[`E${row}`] = { t: "n", v: safeNum(r.exchangeRate, 1), z: "0.000" };
-
-    // Cost (2 decimals)
-    ws[`F${row}`] = { t: "n", v: safeNum(r.costEur, 0), z: "0.00" };
-  });
-
-  // Total row formatting
-  const totalExcelRow = totalRowIndex + 1;
-  ws[`E${totalExcelRow}`] = { t: "s", v: "Total" };
-  ws[`F${totalExcelRow}`] = { t: "n", v: total, z: "0.00" };
-
-  // Autofilter auf die Tabelle (wenn Daten vorhanden)
-  if (receipts.length > 0) {
-    const lastDataRow = dataStartRow + receipts.length - 1;
-    (ws as any)["!autofilter"] = { ref: `A${tableHeaderRow}:F${lastDataRow}` };
-  }
+  // Ensure sheet range includes header rows
+  ws["!ref"] = `A1:F${totalRowIndex + 1}`;
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Travel Expenses");
 
-  const fileName = `Week${trip.isoWeek}.xlsx`;
-  XLSX.writeFile(wb, fileName, { bookType: "xlsx" });
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Week${trip.isoWeek || 0}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

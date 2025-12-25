@@ -40,7 +40,7 @@ export function TripsPage() {
     const created = await client.models.Trip.create({
       arrivalDate: iso,
       returnDate: iso,
-      traveler: "Musti",
+      traveler: "Mustafa Resitoglu",
       isoWeek: wk,
       title: `Week ${wk}`,
     });
