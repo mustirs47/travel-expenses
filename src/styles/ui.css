@@ -319,4 +319,64 @@ label{
   border-top-color: var(--primary);
   animation: spin 0.9s linear infinite;
 }
-@keyframes spin{ to{ transform: rotate(360deg);} }
+@keyframes spin{
+  to{ transform: rotate(360deg);}
+}
+
+/* Center everything */
+.page{
+  min-height: 100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding: 16px;
+}
+
+/* Card sizes */
+.card{
+  width: min(1400px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow:auto;
+}
+
+/* Auth should not be giant */
+.auth-card{
+  width: min(560px, 100%);
+}
+
+/* When logged in, allow full app width */
+.auth-card:has(.layout){
+  width: min(1400px, 100%);
+}
+
+/* Amplify Auth UI -> match your inputs/buttons */
+.auth-card .amplify-authenticator,
+.auth-card .amplify-card{
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+.auth-card .amplify-field__control input{
+  height: 44px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--input-border) !important;
+  background: var(--input-bg) !important;
+  color: var(--text) !important;
+}
+
+.auth-card .amplify-button--primary{
+  background: var(--primary-dark) !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+}
+
+.auth-card .amplify-button--link{
+  color: var(--text) !important;
+  opacity: .85 !important;
+}
+
+body{
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
