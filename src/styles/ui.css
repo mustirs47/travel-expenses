@@ -252,3 +252,102 @@ label{
 @media(max-width:900px){
   .tinput-num{ min-width: 160px; }
 }
+
+/* HARD OVERFLOW FIXES */
+.page, .card, .panel, .layout { max-width: 100%; }
+.layout { width: 100%; }
+.panel { min-width: 0; }            /* wichtig für Grid children */
+.table-wrap { max-width: 100%; }
+.table { max-width: 100%; }
+td, th { max-width: 1px; }          /* erlaubt wrapping/overflow control */
+.tripmain { min-width: 0; }
+
+/* Force horizontal scroll only inside table wrapper */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { min-width: 980px; }        /* Desktop baseline, scrollt bei kleineren Screens */
+
+/* Prevent any element from growing the page */
+* { max-width: 100%; }
+
+/* File controls must not stretch the table */
+.file-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.file-name {
+  font-size: 12px;
+  opacity: .75;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile: allow table to scroll instead of stretching layout */
+@media(max-width:900px){
+  .table { min-width: 1060px; }     /* mobile scroll inside table-wrap */
+}
+
+/* Trip list row layout */
+.triprow{
+  display:flex;
+  gap:10px;
+  align-items:stretch;
+}
+.triprow.active .tripmain{
+  border:2px solid var(--primary);
+}
+.tripmain{
+  flex:1;
+  text-align:left;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--input-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+.tripdel{
+  padding:10px 12px;
+  min-width:44px;
+}
+
+/* Numeric input usability */
+.tinput-num{
+  min-width: 140px;
+  text-align: right;
+}
+@media(max-width:900px){
+  .tinput-num{ min-width: 160px; }
+}
+
+/* Better tap targets on mobile */
+@media(max-width:900px){
+  .tinput, .tselect { height: 44px; font-size: 16px; } /* iOS zoom prevention + bigger */
+  .btn { padding: 12px 14px; }
+  .tripdel { min-width: 48px; }
+}
+
+/* Amplify Auth UI polish */
+.auth-card { max-width: 520px; }
+@media(min-width: 901px){
+  /* after login, TripsPage needs more width; we let it expand */
+  .auth-card:has(.layout){ max-width: 1100px; }
+}
+
+/* Amplify UI tokens override (works with current Amplify UI CSS) */
+:root{
+  --amplify-components-button-primary-background-color: var(--primary-dark);
+  --amplify-components-button-primary-hover-background-color: var(--primary);
+  --amplify-components-button-border-radius: 8px;
+
+  --amplify-components-fieldcontrol-border-color: var(--input-border);
+  --amplify-components-fieldcontrol-focus-border-color: var(--primary);
+  --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 3px rgba(15,98,254,0.12);
+
+  --amplify-colors-background-primary: var(--card-bg);
+  --amplify-colors-font-primary: var(--text);
+}

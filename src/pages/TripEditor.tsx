@@ -188,7 +188,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                   </td>
 
                   <td className="td">
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <div className="file-actions">
                       <input
                         id={inputId}
                         type="file"
@@ -196,7 +196,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (f) attachFile(r, f);
-                          // allow re-upload same file name
                           e.currentTarget.value = "";
                         }}
                       />
@@ -208,6 +207,9 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                       <button className="btn btn-muted" disabled={!r.fileKey} onClick={() => removeAttachment(r)}>Remove</button>
                     </div>
 
+                    {r.fileName && (
+                      <div className="file-name">{r.fileName}</div>
+                    )}
                     {r.fileName && (
                       <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
                         {r.fileName}
