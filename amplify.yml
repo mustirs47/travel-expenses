@@ -1,13 +1,5 @@
 version: 1
-backend:
-  phases:
-    preBuild:
-      commands:
-        - nvm install 18
-        - nvm use 18
-    build:
-      commands:
-        - npm ci
+
 frontend:
   phases:
     preBuild:
