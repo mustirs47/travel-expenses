@@ -1,11 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
-import "./styles/ui.css";
-
 import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
+import App from "./App";
+import "./styles/ui.css";
 
 Amplify.configure(outputs);
 
