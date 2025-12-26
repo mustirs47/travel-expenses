@@ -11,7 +11,6 @@ const CATEGORIES = ["Food and Drinks", "Fuel", "Hotel", "Car"];
 
 // ---------- helpers ----------
 function normalizeDecimalInput(s: string) {
-  // allow user typing: digits, comma, dot, minus
   return s.replace(/[^0-9,.\-]/g, "");
 }
 function parseDecimalFlexible(s: string) {
@@ -38,16 +37,13 @@ function parseDateToISO(value: any): string | null {
     if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
   }
 
-  // If it's already ISO
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
 
-  // If it's "dd.mm.yyyy"
   if (typeof value === "string" && /^\d{2}\.\d{2}\.\d{4}$/.test(value.trim())) {
     const [dd, mm, yyyy] = value.trim().split(".");
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // If it's Excel date number
   if (typeof value === "number") {
     const d = XLSX.SSF.parse_date_code(value);
     if (d) {
@@ -58,7 +54,6 @@ function parseDateToISO(value: any): string | null {
     }
   }
 
-  // Last attempt
   const d = new Date(value);
   if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
@@ -108,7 +103,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
   const [previewTitle, setPreviewTitle] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
-  // Local draft to fix slow typing
   const [tripDraft, setTripDraft] = useState({
     title: trip.title ?? "",
     arrivalDate: trip.arrivalDate ?? "",
@@ -116,7 +110,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
     traveler: trip.traveler ?? "",
   });
 
-  // Local receipt drafts: strings for numeric to allow comma typing
   const [draft, setDraft] = useState<Record<string, { rate: string; cost: string }>>({});
 
   useEffect(() => {
@@ -126,9 +119,8 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       returnDate: trip.returnDate ?? "",
       traveler: trip.traveler ?? "",
     });
-    // reset drafts when switching trip
     setDraft({});
-    loadReceipts();
+    void loadReceipts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip.id]);
 
@@ -137,9 +129,9 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       filter: { tripId: { eq: trip.id } },
       limit: 1000,
     });
+
     setReceipts(res.data);
 
-    // seed numeric drafts from db values
     const seeded: Record<string, { rate: string; cost: string }> = {};
     for (const r of res.data) {
       seeded[r.id] = {
@@ -179,8 +171,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
 
   async function patchReceipt(id: string, patch: Partial<Receipt>) {
     await client.models.Receipt.update({ id, ...patch });
-    // do not reload on every small patch; but after persist we want UI consistent:
-    // reload only on blur-driven saves below
   }
 
   async function attachFile(receipt: Receipt, file: File) {
@@ -236,11 +226,11 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       let traveler = "";
       let title = "";
 
-      for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      for (let i = 0; i < Math.min(rows.length, 30); i++) {
         const row = rows[i];
         if (!row || row.length < 2) continue;
 
-        const label = String(row[0] ?? "").toLowerCase();
+        const label = String(row[0] ?? "").toLowerCase().trim();
         const value = row[1];
 
         if (label.includes("arrival")) arrivalDate = parseDateToISO(value) ?? "";
@@ -249,20 +239,18 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
         if (label.includes("trip title") || (label.includes("trip") && label.includes("title"))) title = String(value ?? "").trim();
       }
 
-      // ---- FALLBACKS ----
       if (!traveler) traveler = "Mustafa Resitoglu";
       if (!title) {
         const base = arrivalDate || returnDate;
         if (base) title = `Week ${getISOWeek(base)}`;
       }
 
-      // Update Trip in DB and local draft so UI shows it immediately
       await client.models.Trip.update({
         id: trip.id,
         title: title || tripDraft.title,
         arrivalDate: arrivalDate || tripDraft.arrivalDate,
         returnDate: returnDate || tripDraft.returnDate,
-        traveler: traveler || tripDraft.traveler,
+        traveler: traveler || tripDraft.traveler || "Mustafa Resitoglu",
       });
 
       setTripDraft((p) => ({
@@ -274,28 +262,37 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       }));
 
       // ---- FIND RECEIPT TABLE HEADER ----
+      const norm = (x: any) => String(x ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
       let headerRowIdx = -1;
-      for (let i = 0; i < Math.min(rows.length, 80); i++) {
-        const r = rows[i]?.map((x) => String(x ?? "").toLowerCase()) ?? [];
-        const hasCat = r.some((c) => c.includes("category"));
-        const hasCost = r.some((c) => c.includes("cost") && (c.includes("eur") || c.includes("in eur")));
-        if (hasCat && hasCost) {
+      for (let i = 0; i < Math.min(rows.length, 120); i++) {
+        const r = rows[i]?.map(norm) ?? [];
+        const hasDate = r.some((c) => c === "date" || c.includes("date"));
+        const hasCat = r.some((c) => c === "category" || c.includes("category"));
+        const hasCost = r.some((c) => c.includes("cost") && c.includes("eur"));
+        if (hasDate && hasCat && hasCost) {
           headerRowIdx = i;
           break;
         }
       }
+
       if (headerRowIdx === -1) {
         alert("Receipt header row not found. Expected columns like: Date, Category, Currency, Exchange Rate, Cost in EUR.");
         return;
       }
 
-      const header = rows[headerRowIdx].map((x) => String(x ?? "").trim().toLowerCase());
+      const header = rows[headerRowIdx].map(norm);
 
       const idxDate = header.findIndex((h) => h === "date" || h.includes("date"));
       const idxCat = header.findIndex((h) => h.includes("category"));
       const idxCurr = header.findIndex((h) => h.includes("currency") || h === "curr");
       const idxRate = header.findIndex((h) => h.includes("exchange") || h === "rate");
-      const idxCost = header.findIndex((h) => h.includes("cost") && (h.includes("eur") || h.includes("in eur")));
+      const idxCost = header.findIndex((h) => h.includes("cost") && h.includes("eur"));
+
+      if (idxCat < 0 || idxCost < 0) {
+        alert("Import failed: required columns not found (Category / Cost in EUR).");
+        return;
+      }
 
       // ---- IMPORT RECEIPTS BELOW HEADER ----
       const dataRows = rows
@@ -305,12 +302,14 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       let imported = 0;
 
       for (const r of dataRows) {
-        const category = idxCat >= 0 ? String(r[idxCat] ?? "").trim() : "";
-        const costEur = idxCost >= 0 ? toNumberFlexible(r[idxCost]) : 0;
+        const rawCategory = idxCat >= 0 ? String(r[idxCat] ?? "").trim() : "";
+        const categoryLower = rawCategory.toLowerCase();
 
-        // skip empty/footer rows
-        if (!category || costEur === 0) continue;
-        if (String(category).toLowerCase().includes("total")) continue;
+        if (!rawCategory) continue;
+        if (categoryLower.includes("total")) continue;
+
+        const costEur = idxCost >= 0 ? toNumberFlexible(r[idxCost]) : 0;
+        if (!costEur || costEur === 0) continue;
 
         const dateISO = idxDate >= 0 ? parseDateToISO(r[idxDate]) : null;
         const currency = idxCurr >= 0 ? String(r[idxCurr] ?? "EUR").trim() : "EUR";
@@ -319,10 +318,10 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
         await client.models.Receipt.create({
           tripId: trip.id,
           date: dateISO ?? "",
-          category: category || "Food and Drinks",
+          category: rawCategory || "Food and Drinks",
           currency: currency || "EUR",
-          exchangeRate: exchangeRate || 0,
-          costEur: costEur || 0,
+          exchangeRate: exchangeRate || 1,
+          costEur: costEur,
         });
 
         imported++;
@@ -330,7 +329,12 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
 
       await loadReceipts();
       await onChanged();
-      alert(`Import finished: ${imported} receipts imported.`);
+
+      if (imported === 0) {
+        alert("Import finished, but 0 receipts were detected. Check the Excel header/format.");
+      } else {
+        alert(`Import finished: ${imported} receipts imported.`);
+      }
     } catch (e) {
       console.error(e);
       alert("Import failed. Check console for details.");
@@ -409,26 +413,19 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             style={{ display: "none" }}
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) importXlsx(f);
-              // iOS: reset in next tick ist stabiler
-              setTimeout(() => { e.currentTarget.value = ""; }, 0);
+              if (f) void importXlsx(f);
+              setTimeout(() => {
+                e.currentTarget.value = "";
+              }, 0);
             }}
           />
 
+          {/* iOS-stable trigger */}
           <label className={`btn btn-muted ${importing ? "btn-disabled" : ""}`} htmlFor="import-xlsx">
             Import Excel
           </label>
 
-          <button
-            className="btn btn-muted"
-            type="button"
-            onClick={() => (document.getElementById("import-xlsx") as HTMLInputElement | null)?.click()}
-            disabled={importing}
-          >
-            Import Excel
-          </button>
-
-          <button className="btn btn-primary" onClick={addReceipt}>
+          <button className="btn btn-primary" onClick={() => void addReceipt()}>
             Add Row +
           </button>
 
@@ -587,31 +584,20 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                         style={{ display: "none" }}
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) attachFile(r, f);
+                          if (f) void attachFile(r, f);
                           e.currentTarget.value = "";
                         }}
                       />
 
-                      <button
-                        className="ibtn"
-                        type="button"
-                        title="Upload"
-                        onClick={() => (document.getElementById(inputId) as HTMLInputElement | null)?.click()}
-                      >
+                      <button className="ibtn" type="button" title="Upload" onClick={() => (document.getElementById(inputId) as HTMLInputElement | null)?.click()}>
                         <IconUpload />
                       </button>
 
-                      <button className="ibtn" type="button" title="Preview" disabled={!r.fileKey} onClick={() => openPreview(r)}>
+                      <button className="ibtn" type="button" title="Preview" disabled={!r.fileKey} onClick={() => void openPreview(r)}>
                         <IconEye />
                       </button>
 
-                      <button
-                        className="ibtn ibtn-danger"
-                        type="button"
-                        title="Remove attachment"
-                        disabled={!r.fileKey}
-                        onClick={() => removeAttachment(r)}
-                      >
+                      <button className="ibtn ibtn-danger" type="button" title="Remove attachment" disabled={!r.fileKey} onClick={() => void removeAttachment(r)}>
                         <IconUnlink />
                       </button>
                     </div>
@@ -624,7 +610,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                   </td>
 
                   <td className="td">
-                    <button className="btn btn-danger" onClick={() => removeReceipt(r.id)} style={{ padding: "10px 12px" }}>
+                    <button className="btn btn-danger" onClick={() => void removeReceipt(r.id)} style={{ padding: "10px 12px" }}>
                       ✖
                     </button>
                   </td>
