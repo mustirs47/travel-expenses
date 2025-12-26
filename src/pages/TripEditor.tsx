@@ -37,13 +37,16 @@ function parseDateToISO(value: any): string | null {
     if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
   }
 
+  // ISO
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
 
+  // dd.mm.yyyy
   if (typeof value === "string" && /^\d{2}\.\d{2}\.\d{4}$/.test(value.trim())) {
     const [dd, mm, yyyy] = value.trim().split(".");
     return `${yyyy}-${mm}-${dd}`;
   }
 
+  // Excel date number
   if (typeof value === "number") {
     const d = XLSX.SSF.parse_date_code(value);
     if (d) {
@@ -54,6 +57,7 @@ function parseDateToISO(value: any): string | null {
     }
   }
 
+  // fallback
   const d = new Date(value);
   if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
@@ -91,8 +95,18 @@ const IconEye = () => (
 
 const IconUnlink = () => (
   <svg viewBox="0 0 24 24" fill="none">
-    <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
     <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
@@ -286,7 +300,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       const idxDate = header.findIndex((h) => h === "date" || h.includes("date"));
       const idxCat = header.findIndex((h) => h.includes("category"));
       const idxCurr = header.findIndex((h) => h.includes("currency") || h === "curr");
-      const idxRate = header.findIndex((h) => h.includes("exchange") || h === "rate");
+      const idxRate = header.findIndex((h) => h.includes("exchange") || h.includes("rate"));
       const idxCost = header.findIndex((h) => h.includes("cost") && h.includes("eur"));
 
       if (idxCat < 0 || idxCost < 0) {
@@ -294,7 +308,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
         return;
       }
 
-      // ---- IMPORT RECEIPTS BELOW HEADER ----
       const dataRows = rows
         .slice(headerRowIdx + 1)
         .filter((r) => r && r.some((x) => String(x ?? "").trim() !== ""));
@@ -405,6 +418,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
 
       <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div style={{ fontSize: 13, fontWeight: 800 }}>Receipts: {receipts.length}</div>
+
         <div className="actions">
           <input
             id="import-xlsx"
@@ -420,7 +434,6 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             }}
           />
 
-          {/* iOS-stable trigger */}
           <label className={`btn btn-muted ${importing ? "btn-disabled" : ""}`} htmlFor="import-xlsx">
             Import Excel
           </label>
@@ -458,12 +471,12 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       <div className="table-wrap">
         <table className="table" role="table" aria-label="Receipts">
           <colgroup>
-            <col style={{ width: 50 }} />
-            <col style={{ width: 135 }} />
-            <col style={{ width: 230 }} />
-            <col style={{ width: 95 }} />
+            <col style={{ width: 46 }} />
+            <col style={{ width: 140 }} />
+            <col style={{ width: 220 }} />
             <col style={{ width: 90 }} />
-            <col style={{ width: 130 }} />
+            <col style={{ width: 92 }} />
+            <col style={{ width: 120 }} />
             <col style={{ width: 170 }} />
             <col style={{ width: 70 }} />
           </colgroup>
@@ -492,7 +505,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
 
                   <td className="td">
                     <input
-                      className="tinput"
+                      className="tinput tdate"
                       type="date"
                       value={r.date ?? ""}
                       onChange={(e) => {

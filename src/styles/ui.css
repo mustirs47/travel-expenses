@@ -403,3 +403,34 @@ body{
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
            env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+
+/* iOS Safari date input styling normalisieren */
+.tinput.tdate {
+  height: 40px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.2;
+  width: 100%;
+  box-sizing: border-box;
+
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* iOS: Kalender-Icon nicht “extra spacing” erzeugen */
+.tinput.tdate::-webkit-calendar-picker-indicator {
+  opacity: 0.8;
+  margin: 0;
+  padding: 0;
+}
+
+/* iOS autofill / focus */
+.tinput.tdate:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.12);
+  outline: none;
+}
