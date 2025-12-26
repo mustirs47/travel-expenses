@@ -410,9 +410,14 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) importXlsx(f);
-              e.currentTarget.value = "";
+              // iOS: reset in next tick ist stabiler
+              setTimeout(() => { e.currentTarget.value = ""; }, 0);
             }}
           />
+
+          <label className={`btn btn-muted ${importing ? "btn-disabled" : ""}`} htmlFor="import-xlsx">
+            Import Excel
+          </label>
 
           <button
             className="btn btn-muted"
