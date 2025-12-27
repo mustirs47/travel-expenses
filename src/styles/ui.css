@@ -51,10 +51,10 @@
   }
 }
 
-*{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
+  * { box-sizing: border-box }
   background:var(--bg);
   color:var(--text);
   -webkit-text-size-adjust:100%;
@@ -433,4 +433,24 @@ body{
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.12);
   outline: none;
+}
+
+.appShell{
+  height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.sidebar{
+  min-width: 0;
+}
+
+.main{
+  min-width: 0;        /* WICHTIG: verhindert “Main schrumpft auf 5px” */
+  width: 100%;
 }
