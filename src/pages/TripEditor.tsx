@@ -37,7 +37,7 @@ function parseDateToISO(value: any): string | null {
     if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
   }
 
-  // ISO
+  // already ISO
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return value.trim();
 
   // dd.mm.yyyy
@@ -46,7 +46,7 @@ function parseDateToISO(value: any): string | null {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // Excel date number
+  // Excel serial number
   if (typeof value === "number") {
     const d = XLSX.SSF.parse_date_code(value);
     if (d) {
@@ -57,7 +57,7 @@ function parseDateToISO(value: any): string | null {
     }
   }
 
-  // fallback
+  // last attempt
   const d = new Date(value);
   if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
@@ -95,18 +95,8 @@ const IconEye = () => (
 
 const IconUnlink = () => (
   <svg viewBox="0 0 24 24" fill="none">
-    <path
-      d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <path
-      d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
+    <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
@@ -117,6 +107,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
   const [previewTitle, setPreviewTitle] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
+  // Local draft to fix slow typing
   const [tripDraft, setTripDraft] = useState({
     title: trip.title ?? "",
     arrivalDate: trip.arrivalDate ?? "",
@@ -124,6 +115,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
     traveler: trip.traveler ?? "",
   });
 
+  // Local receipt drafts: strings for numeric to allow comma typing
   const [draft, setDraft] = useState<Record<string, { rate: string; cost: string }>>({});
 
   useEffect(() => {
@@ -162,7 +154,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       title: tripDraft.title,
       arrivalDate: tripDraft.arrivalDate,
       returnDate: tripDraft.returnDate,
-      traveler: tripDraft.traveler,
+      traveler: tripDraft.traveler || "Mustafa Resitoglu",
     });
     await onChanged();
   }
@@ -201,6 +193,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       fileName: file.name,
       mimeType: file.type || "",
     });
+
     await loadReceipts();
   }
 
@@ -244,7 +237,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
         const row = rows[i];
         if (!row || row.length < 2) continue;
 
-        const label = String(row[0] ?? "").toLowerCase().trim();
+        const label = String(row[0] ?? "").toLowerCase();
         const value = row[1];
 
         if (label.includes("arrival")) arrivalDate = parseDateToISO(value) ?? "";
@@ -253,12 +246,15 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
         if (label.includes("trip title") || (label.includes("trip") && label.includes("title"))) title = String(value ?? "").trim();
       }
 
+      // ---- FALLBACKS ----
       if (!traveler) traveler = "Mustafa Resitoglu";
       if (!title) {
         const base = arrivalDate || returnDate;
         if (base) title = `Week ${getISOWeek(base)}`;
+        else title = tripDraft.title || `Week ${trip.isoWeek ?? ""}`;
       }
 
+      // Update Trip in DB and local draft
       await client.models.Trip.update({
         id: trip.id,
         title: title || tripDraft.title,
@@ -276,44 +272,42 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       }));
 
       // ---- FIND RECEIPT TABLE HEADER ----
-      const norm = (x: any) => String(x ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-
       let headerRowIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 120); i++) {
-        const r = rows[i]?.map(norm) ?? [];
-        const hasDate = r.some((c) => c === "date" || c.includes("date"));
-        const hasCat = r.some((c) => c === "category" || c.includes("category"));
-        const hasCost = r.some((c) => c.includes("cost") && c.includes("eur"));
-        if (hasDate && hasCat && hasCost) {
+        const r = rows[i]?.map((x) => String(x ?? "").toLowerCase()) ?? [];
+        const hasCat = r.some((c) => c.includes("category"));
+        const hasCost = r.some((c) => c.includes("cost") && (c.includes("eur") || c.includes("in eur")));
+        if (hasCat && hasCost) {
           headerRowIdx = i;
           break;
         }
       }
-
       if (headerRowIdx === -1) {
         alert("Receipt header row not found. Expected columns like: Date, Category, Currency, Exchange Rate, Cost in EUR.");
         return;
       }
 
-      const header = rows[headerRowIdx].map(norm);
-
+      const header = rows[headerRowIdx].map((x) => String(x ?? "").trim().toLowerCase());
       const idxDate = header.findIndex((h) => h === "date" || h.includes("date"));
       const idxCat = header.findIndex((h) => h.includes("category"));
       const idxCurr = header.findIndex((h) => h.includes("currency") || h === "curr");
-      const idxRate = header.findIndex((h) => h.includes("exchange") || h.includes("rate"));
-      const idxCost = header.findIndex((h) => h.includes("cost") && h.includes("eur"));
+      const idxRate = header.findIndex((h) => h.includes("exchange") || h === "rate");
+      const idxCost = header.findIndex((h) => h.includes("cost") && (h.includes("eur") || h.includes("in eur")));
 
+      // required
       if (idxCat < 0 || idxCost < 0) {
         alert("Import failed: required columns not found (Category / Cost in EUR).");
         return;
       }
 
+      // ---- IMPORT RECEIPTS BELOW HEADER ----
       const dataRows = rows
         .slice(headerRowIdx + 1)
         .filter((r) => r && r.some((x) => String(x ?? "").trim() !== ""));
 
       let imported = 0;
 
+      // sequential create = stabiler auf iOS + weniger Backend-Stress
       for (const r of dataRows) {
         const rawCategory = idxCat >= 0 ? String(r[idxCat] ?? "").trim() : "";
         const categoryLower = rawCategory.toLowerCase();
@@ -384,6 +378,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             placeholder={`Week ${trip.isoWeek ?? ""}`}
           />
         </div>
+
         <div className="field">
           <label>Arrival Date</label>
           <input
@@ -394,6 +389,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             onBlur={persistTrip}
           />
         </div>
+
         <div className="field">
           <label>Return Date</label>
           <input
@@ -404,6 +400,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             onBlur={persistTrip}
           />
         </div>
+
         <div className="field">
           <label>Traveler</label>
           <input
@@ -411,7 +408,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             value={tripDraft.traveler}
             onChange={(e) => setTripDraft((p) => ({ ...p, traveler: e.target.value }))}
             onBlur={persistTrip}
-            placeholder="Name"
+            placeholder="Mustafa Resitoglu"
           />
         </div>
       </div>
@@ -428,17 +425,18 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void importXlsx(f);
+              // iOS: reset in next tick ist stabiler
               setTimeout(() => {
                 e.currentTarget.value = "";
               }, 0);
             }}
           />
 
-          <label className={`btn btn-muted ${importing ? "btn-disabled" : ""}`} htmlFor="import-xlsx">
+          <label className={`btn btn-muted ${importing ? "btn-disabled" : ""}`} htmlFor="import-xlsx" aria-disabled={importing}>
             Import Excel
           </label>
 
-          <button className="btn btn-primary" onClick={() => void addReceipt()}>
+          <button className="btn btn-primary" onClick={addReceipt}>
             Add Row +
           </button>
 
@@ -449,7 +447,7 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
                 {
                   arrivalDate: tripDraft.arrivalDate,
                   returnDate: tripDraft.returnDate,
-                  traveler: tripDraft.traveler,
+                  traveler: tripDraft.traveler || "Mustafa Resitoglu",
                   isoWeek: Number(trip.isoWeek ?? 0),
                   title: tripDraft.title,
                 },
@@ -471,11 +469,11 @@ export function TripEditor({ trip, onChanged }: { trip: Trip; onChanged: () => v
       <div className="table-wrap">
         <table className="table" role="table" aria-label="Receipts">
           <colgroup>
-            <col style={{ width: 46 }} />
+            <col style={{ width: 44 }} />
             <col style={{ width: 140 }} />
-            <col style={{ width: 220 }} />
+            <col style={{ width: 230 }} />
             <col style={{ width: 90 }} />
-            <col style={{ width: 92 }} />
+            <col style={{ width: 96 }} />
             <col style={{ width: 120 }} />
             <col style={{ width: 170 }} />
             <col style={{ width: 70 }} />
